@@ -63,11 +63,11 @@ class MainActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     )
                     {
-                        GetButton(start = {
+                        GetStartButton(start = {
                             val intent = Intent(this@MainActivity, Game::class.java)
                             startActivity(intent)
                         })
-                        GetButton(start = {
+                        GetPokedexButton(start = {
                             val intent = Intent(this@MainActivity, Pokedex::class.java)
                             startActivity(intent)
                         })
@@ -124,11 +124,23 @@ fun BeautifulColors(s: String) {
 }
 
 @Composable
-fun GetButton(start: () -> Unit) {
+fun GetStartButton(start: () -> Unit) {
     AndroidView(
         factory = {context ->
             val view = LayoutInflater.from(context).inflate(R.layout.start_button, null, false)
             val button = view.findViewById<Button>(R.id.startButton)
+            button.setOnClickListener { start() }
+            view
+        }
+    )
+}
+
+@Composable
+fun GetPokedexButton(start: () -> Unit) {
+    AndroidView(
+        factory = {context ->
+            val view = LayoutInflater.from(context).inflate(R.layout.pokedex_button, null, false)
+            val button = view.findViewById<Button>(R.id.pokedexButton)
             button.setOnClickListener { start() }
             view
         }

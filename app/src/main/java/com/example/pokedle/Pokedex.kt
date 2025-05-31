@@ -2,14 +2,9 @@ package com.example.pokedle
 
 import android.os.Bundle
 import android.view.LayoutInflater
-import android.view.View
-import android.widget.ImageButton
-import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -33,16 +28,13 @@ import androidx.compose.ui.text.font.FontWeight.Companion.W900
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import com.example.pokedle.ui.theme.PokedleTheme
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.lang.Thread.sleep
-import kotlin.math.log
+import java.io.BufferedInputStream
+import java.net.URL
+import javax.net.ssl.HttpsURLConnection
 
 class Pokedex : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -97,13 +89,23 @@ fun GetHeaderText() {
 @Composable
 fun Loading() {
     var showLoading by remember { mutableStateOf(true) }
+    var pokemonData by remember { mutableStateOf<String>("Nothing") }
 
     LaunchedEffect(true) {
         // Delay = Simulation
         // Replace delay by fetching
         delay(2000)
-        showLoading = false
         // Print values
+
+        try {
+            pokemonData = fetchPokemonData()
+        } catch (e: Exception) {
+            println(e)
+            pokemonData = "Failed to fetch data"
+        }
+        showLoading = false
+
+
     }
 
     if (showLoading) {
@@ -113,5 +115,36 @@ fun Loading() {
             fontWeight = W900,
             fontSize = 40.sp
         )
+    } else {
+        Text(
+            text = pokemonData,
+            color = Color.White,
+            fontWeight = W900,
+            fontSize = 40.sp
+        )
+    }
+}
+
+data class PokemonResponse(
+    val count: Int,
+    val results: List<Pokemon>
+)
+
+data class Pokemon(
+    val name: String,
+    val url: String
+)
+
+
+suspend fun fetchPokemonData(): String {
+    return withContext(Dispatchers.IO) {
+        val url = URL("https://pokeapi.co/api/v2/pokemon/?offset=0")
+        val connection = url.openConnection() as HttpsURLConnection
+        try {
+            val inputStream = BufferedInputStream(connection.inputStream)
+            inputStream.bufferedReader().readText()
+        } finally {
+            connection.disconnect()
+        }
     }
 }

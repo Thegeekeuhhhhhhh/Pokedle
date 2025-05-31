@@ -39,7 +39,19 @@ android {
     }
 }
 
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
 dependencies {
+    // Glide
+    implementation(libs.coil.compose)
+    implementation(libs.github.glide)
+
+    // Http Client
     implementation(libs.androidx.lifecycle.runtime.ktx.v241)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.com.squareup.okhttp3.okhttp)

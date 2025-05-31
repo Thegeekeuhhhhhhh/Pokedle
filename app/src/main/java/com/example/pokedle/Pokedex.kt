@@ -211,9 +211,9 @@ fun Loading() : String {
     } else {
         val state = rememberScrollState(0)
         Column(
-            modifier = Modifier.background(Color.Transparent).verticalScroll(
+            modifier = Modifier.background(Color.Transparent).verticalColumnScrollbar(state).verticalScroll(
                 state
-            ).verticalColumnScrollbar(state),
+            ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             for (i in 0..pokes.size - 1) {

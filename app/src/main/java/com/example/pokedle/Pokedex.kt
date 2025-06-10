@@ -1,7 +1,9 @@
 package com.example.pokedle
 
 import android.annotation.SuppressLint
+import android.content.res.Configuration
 import android.os.Bundle
+import android.os.Parcelable
 import android.view.LayoutInflater
 import android.widget.Button
 import androidx.activity.ComponentActivity
@@ -28,7 +30,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -47,19 +54,38 @@ import androidx.compose.ui.viewinterop.AndroidView
 import coil.compose.AsyncImage
 import com.example.pokedle.ui.theme.PokedleTheme
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.parcelize.Parcelize
 import org.json.JSONObject
 import java.io.BufferedInputStream
-import java.lang.Thread.sleep
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
 
-class Pokedex : ComponentActivity() {
+val PokedexDataListSaver = Saver<SnapshotStateList<PokedexData>, List<Map<String, Any>>>(
+    save = { list ->
+        list.map { pokemon ->
+            mapOf(
+                "name" to pokemon.name,
+                "picUrl" to pokemon.picUrl,
+                "id" to pokemon.id
+            )
+        }
+    },
+    restore = { savedList ->
+        savedList.map { map ->
+            PokedexData(
+                name = map["name"] as String,
+                picUrl = map["picUrl"] as String,
+                id = map["id"] as Int
+            )
+        }.toMutableStateList()
+    }
+)
 
+class Pokedex : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -68,15 +94,27 @@ class Pokedex : ComponentActivity() {
                 Box(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.poke_bg),
-                        contentDescription = "Poke background",
-                        contentScale = ContentScale.FillBounds,
-                        modifier = Modifier.matchParentSize(),
-                    )
+                    if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
+                        Image(
+                            painter = painterResource(R.drawable.poke_bg),
+                            contentDescription = "Poke background",
+                            contentScale = ContentScale.FillBounds,
+                            modifier = Modifier.matchParentSize(),
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(R.drawable.poke_bg_landscape),
+                            contentDescription = "Poke background",
+                            contentScale = ContentScale.FillBounds,
+                            modifier = Modifier.matchParentSize(),
+                        )
+                    }
                 }
                 Box(
-                    modifier = Modifier.fillMaxSize().padding(all = 20.dp).background(Color.Gray)
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(all = 20.dp)
+                        .background(Color.Gray)
                 ) {
                     Column(
                         modifier = Modifier.matchParentSize(),
@@ -89,11 +127,13 @@ class Pokedex : ComponentActivity() {
                     }
 
                     Column(
-                        modifier = Modifier.matchParentSize().padding(top = 70.dp), // 120 c'est du bluff la team
+                        modifier = Modifier
+                            .matchParentSize()
+                            .padding(top = 70.dp), // 120 c'est du bluff la team
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Loading()
+                        Loading(resources.configuration.orientation)
                     }
                 }
             }
@@ -112,12 +152,35 @@ fun GetHeaderText() {
 }
 
 @Composable
-fun LoadMoreButton(start: () -> Unit) {
+fun LoadMoreButton(start: suspend () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var loading by remember { mutableStateOf(false) }
+
     AndroidView(
         factory = {context ->
             val view = LayoutInflater.from(context).inflate(R.layout.load_more, null, false)
             val button = view.findViewById<Button>(R.id.loadMoreButton)
-            button.setOnClickListener { start() }
+            button.setOnClickListener {
+                if (loading == false) {
+                    loading = true
+                    button.isEnabled = false
+                    button.isClickable = false
+                    button.text = "Loading..."
+                    scope.launch {
+                        try {
+                            start()
+                        } catch (e: Exception) {
+                            // TODO
+                            // Gerer l exception
+                        } finally {
+                            loading = false
+                            button.isEnabled = true
+                            button.isClickable = true
+                            button.text = "LOAD MORE"
+                        }
+                    }
+                }
+            }
             view
         }
     )
@@ -161,44 +224,47 @@ fun Modifier.verticalColumnScrollbar(
 
 @SuppressLint("CoroutineCreationDuringComposition")
 @Composable
-fun Loading() : String {
+fun Loading(orientation: Int) : String {
     var showLoading by remember { mutableStateOf(true) }
     var pokemonData by remember { mutableStateOf<String>("Nothing") }
-    var pokes = remember { mutableStateListOf<PokedexData>() }
     var index = remember { 1 }
+    val pokes = rememberSaveable(saver = PokedexDataListSaver) {
+        mutableStateListOf<PokedexData>()
+    }
 
     LaunchedEffect(true) {
         try {
-            pokemonData = fetch("https://pokeapi.co/api/v2/pokemon/?offset=0")
-            val json = JSONObject(pokemonData)
-            val results = json.getJSONArray("results")
+            if (pokes.isEmpty()) {
+                pokemonData = fetch("https://pokeapi.co/api/v2/pokemon/?offset=0")
+                val json = JSONObject(pokemonData)
+                val results = json.getJSONArray("results")
 
-            val threads = (0..19).map { i ->
-                async(Dispatchers.IO) {
-                    val apiUrl = results.getJSONObject(i).get("url").toString()
-                    val pokemonResult = JSONObject(fetch(apiUrl))
-                    val pic = pokemonResult.getJSONObject("sprites").get("front_default").toString()
-                    withContext(Dispatchers.Main) {
-                        pokes.add(
-                            PokedexData(
-                                results.getJSONObject(i).get("name").toString(),
-                                pic,
-                                i,
+                val threads = (0..19).map { i ->
+                    async(Dispatchers.IO) {
+                        val apiUrl = results.getJSONObject(i).get("url").toString()
+                        val pokemonResult = JSONObject(fetch(apiUrl))
+                        val pic =
+                            pokemonResult.getJSONObject("sprites").get("front_default").toString()
+                        withContext(Dispatchers.Main) {
+                            pokes.add(
+                                PokedexData(
+                                    results.getJSONObject(i).get("name").toString(),
+                                    pic,
+                                    i,
+                                )
                             )
-                        )
+                        }
                     }
                 }
-            }
 
-            threads.awaitAll()
-            pokes.sortWith({ lhs: PokedexData, rhs: PokedexData -> lhs.id - rhs.id })
+                threads.awaitAll()
+                pokes.sortWith({ lhs: PokedexData, rhs: PokedexData -> lhs.id - rhs.id })
+            }
         } catch (e: Exception) {
             pokemonData = "Fetch fail"
         }
         showLoading = false
     }
-
-    sleep(1000)
 
     if (showLoading) {
         Text(
@@ -211,48 +277,125 @@ fun Loading() : String {
     } else {
         val state = rememberScrollState(0)
         Column(
-            modifier = Modifier.background(Color.Transparent).verticalColumnScrollbar(state).verticalScroll(
-                state
-            ),
+            modifier = Modifier
+                .background(Color.Transparent)
+                .verticalColumnScrollbar(state)
+                .verticalScroll(
+                    state
+                ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            for (i in 0..pokes.size - 1) {
+            if (orientation == Configuration.ORIENTATION_PORTRAIT) {
+                for (i in 0..pokes.size - 1) {
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Button(onClick = {
+                            println(pokes[i].name)
+                            // TODO
+                            // Redigerer vers la page Pokedex
+                        }) {
+                            AsyncImage(
+                                model = pokes[i].picUrl,
+                                placeholder = painterResource(R.drawable.loading),
+                                error = painterResource(R.drawable.poke_bg),
+                                contentDescription = "Image of " + pokes[i].name,
+                                modifier = Modifier
+                                    .height(50.dp)
+                                    .width(50.dp)
+                            )
+                            Text(
+                                text = pokes[i].name.replaceFirstChar {
+                                    if (it.isLowerCase()) {
+                                        it.titlecase().toString()
+                                    } else {
+                                        it.toString()
+                                    }
+                                },
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.W700,
+                            )
+                        }
+                    }
+                }
+            } else {
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Button(onClick = {
-                        println(pokes[i].name)
-                        // TODO
-                        // Redigerer vers la page Pokedex
-                    }) {
-                        AsyncImage(
-                            model = pokes[i].picUrl,
-                            placeholder = painterResource(R.drawable.loading),
-                            error = painterResource(R.drawable.poke_bg),
-                            contentDescription = "Image of " + pokes[i].name,
-                            modifier = Modifier.height(50.dp).width(50.dp)
-                        )
-                        Text(
-                            text = pokes[i].name.replaceFirstChar {
-                                if (it.isLowerCase()) {
-                                    it.titlecase().toString()
-                                } else {
-                                    it.toString()
-                                }
-                            },
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.W700,
-                        )
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                    ) {
+                        for (i in 0..pokes.size - 1 step 2) {
+                            Button(
+                                onClick = {
+                                    println(pokes[i].name)
+                                    // TODO
+                                    // Redigerer vers la page Pokedex
+                                }) {
+                                AsyncImage(
+                                    model = pokes[i].picUrl,
+                                    placeholder = painterResource(R.drawable.loading),
+                                    error = painterResource(R.drawable.poke_bg),
+                                    contentDescription = "Image of " + pokes[i].name,
+                                    modifier = Modifier
+                                        .height(50.dp)
+                                        .width(50.dp)
+                                )
+                                Text(
+                                    text = pokes[i].name.replaceFirstChar {
+                                        if (it.isLowerCase()) {
+                                            it.titlecase().toString()
+                                        } else {
+                                            it.toString()
+                                        }
+                                    },
+                                    fontSize = 28.sp,
+                                    fontWeight = FontWeight.W700,
+                                )
+                            }
+                        }
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.Start,
+                    ) {
+                        for (i in 1..pokes.size - 1 step 2) {
+                            Button(
+                                onClick = {
+                                    println(pokes[i].name)
+                                    // TODO
+                                    // Redigerer vers la page Pokedex
+                                }) {
+                                AsyncImage(
+                                    model = pokes[i].picUrl,
+                                    placeholder = painterResource(R.drawable.loading),
+                                    error = painterResource(R.drawable.poke_bg),
+                                    contentDescription = "Image of " + pokes[i].name,
+                                    modifier = Modifier
+                                        .height(50.dp)
+                                        .width(50.dp)
+                                )
+                                Text(
+                                    text = pokes[i].name.replaceFirstChar {
+                                        if (it.isLowerCase()) {
+                                            it.titlecase().toString()
+                                        } else {
+                                            it.toString()
+                                        }
+                                    },
+                                    fontSize = 28.sp,
+                                    fontWeight = FontWeight.W700,
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            LoadMoreButton({
-                // TODO
-                // Add content
-                println(index)
-                GlobalScope.launch {
+            LoadMoreButton(){
+                withContext(Dispatchers.IO) {
                     try {
                         pokemonData =
                             fetch("https://pokeapi.co/api/v2/pokemon/?offset=" + index * 20)
@@ -286,23 +429,19 @@ fun Loading() : String {
                         pokemonData = "Fetch fail"
                     }
                 }
-
-                println(pokes.size)
-
-
-
-            })
+            }
         }
 
         return pokemonData
     }
 }
 
-class PokedexData(
+@Parcelize
+data class PokedexData(
     val name: String,
     val picUrl: String,
     val id: Int,
-)
+) : Parcelable
 
 data class PokemonResponse(
     val count: Int,

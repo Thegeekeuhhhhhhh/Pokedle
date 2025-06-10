@@ -1,6 +1,7 @@
 package com.example.pokedle
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.widget.Button
@@ -14,17 +15,16 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,12 +50,21 @@ class MainActivity : ComponentActivity() {
                 Box(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.poke_bg),
-                        contentDescription = "Poke background",
-                        contentScale = ContentScale.FillBounds,
-                        modifier = Modifier.matchParentSize(),
-                    )
+                    if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
+                        Image(
+                            painter = painterResource(R.drawable.poke_bg),
+                            contentDescription = "Poke background",
+                            contentScale = ContentScale.FillBounds,
+                            modifier = Modifier.matchParentSize(),
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(R.drawable.poke_bg_landscape),
+                            contentDescription = "Poke background",
+                            contentScale = ContentScale.FillBounds,
+                            modifier = Modifier.matchParentSize(),
+                        )
+                    }
 
                     Column(
                         modifier = Modifier.fillMaxSize(),
@@ -63,14 +72,31 @@ class MainActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     )
                     {
-                        GetStartButton(start = {
-                            val intent = Intent(this@MainActivity, Game::class.java)
-                            startActivity(intent)
-                        })
-                        GetPokedexButton(start = {
-                            val intent = Intent(this@MainActivity, Pokedex::class.java)
-                            startActivity(intent)
-                        })
+                        Image(
+                            painter = painterResource(R.drawable.logo),
+                            contentDescription = "Pokedle logo",
+                        )
+                        if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
+                            GetStartButton(start = {
+                                val intent = Intent(this@MainActivity, Game::class.java)
+                                startActivity(intent)
+                            })
+                            GetPokedexButton(start = {
+                                val intent = Intent(this@MainActivity, Pokedex::class.java)
+                                startActivity(intent)
+                            })
+                        } else {
+                            Row {
+                                GetStartButton(start = {
+                                    val intent = Intent(this@MainActivity, Game::class.java)
+                                    startActivity(intent)
+                                })
+                                GetPokedexButton(start = {
+                                    val intent = Intent(this@MainActivity, Pokedex::class.java)
+                                    startActivity(intent)
+                                })
+                            }
+                        }
                         BeautifulColors("Dardan Bytyqi\nHugo Viala\nLéo Menaldo")
                     }
                 }

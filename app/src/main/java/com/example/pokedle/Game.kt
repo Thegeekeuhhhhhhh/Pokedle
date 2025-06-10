@@ -23,6 +23,11 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.pokedle.ui.theme.PokedleTheme
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 class Game : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,12 +55,43 @@ class Game : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     )
                     {
+                        PokedleGame()
                     }
                 }
             }
         }
     }
 }
+
+@Composable
+fun PokedleGame() {
+    var guess by remember { mutableStateOf("") }
+    var feedback by remember { mutableStateOf("") }
+    val targetPokemon = remember { listOf("pikachu", "bulbasaur", "charmander", "squirtle").random() }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("Guess the Pokémon!", fontSize = 28.sp)
+
+        OutlinedTextField(
+            value = guess,
+            onValueChange = { guess = it },
+            label = { Text("Enter name") }
+        )
+
+        Button(onClick = {
+            feedback = if (guess.lowercase() == targetPokemon) {
+                "Correct! It was $targetPokemon."
+            } else {
+                "Wrong! Try again."
+            }
+        }) {
+            Text("Submit")
+        }
+
+        Text(text = feedback, fontSize = 20.sp, modifier = Modifier.padding(top = 16.dp))
+    }
+}
+
 
 @Composable
 fun GetHomeButton(start: () -> Unit) {

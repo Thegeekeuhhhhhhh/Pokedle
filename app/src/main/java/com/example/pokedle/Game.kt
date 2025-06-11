@@ -96,6 +96,7 @@ fun PokedleGame() {
             } else {
                 "Wrong! Try again."
             }
+            guess = ""
         }) {
             Text("Submit")
         }

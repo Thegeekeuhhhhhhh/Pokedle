@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -122,8 +123,6 @@ class Pokedex : ComponentActivity() {
                         verticalArrangement = Arrangement.Top
                     ) {
                         GetHeaderText()
-                        // TODO
-                        // Mettre la barre de recherche juste en dessous
                     }
 
                     Column(
@@ -226,11 +225,15 @@ fun Modifier.verticalColumnScrollbar(
 @Composable
 fun Loading(orientation: Int) : String {
     var showLoading by remember { mutableStateOf(true) }
+    var changedResearch by remember { mutableStateOf(true) }
     var pokemonData by remember { mutableStateOf<String>("Nothing") }
     var index = remember { 1 }
     val pokes = rememberSaveable(saver = PokedexDataListSaver) {
         mutableStateListOf<PokedexData>()
     }
+    var pokesToDisplay = remember { mutableStateListOf<PokedexData>() }
+
+    var guess by remember { mutableStateOf("") }
 
     LaunchedEffect(true) {
         try {
@@ -275,6 +278,24 @@ fun Loading(orientation: Int) : String {
         )
         return ""
     } else {
+        if (changedResearch) {
+            if (guess.length == 0) {
+                println("Guess = null")
+                pokesToDisplay.clear()
+                for (i in 0..pokes.size - 1) {
+                    pokesToDisplay.add(PokedexData(pokes[i].name, pokes[i].picUrl, pokes[i].id))
+                }
+            } else {
+                pokesToDisplay.clear()
+                println("Guess = $guess")
+                for (i in 0..pokes.size - 1) {
+                    if (pokes[i].name.lowercase().startsWith(guess.lowercase())) {
+                        pokesToDisplay.add(PokedexData(pokes[i].name, pokes[i].picUrl, pokes[i].id))
+                    }
+                }
+            }
+            changedResearch = false
+        }
         val state = rememberScrollState(0)
         Column(
             modifier = Modifier
@@ -285,28 +306,36 @@ fun Loading(orientation: Int) : String {
                 ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            OutlinedTextField(
+                value = guess,
+                onValueChange = {
+                    guess = it
+                    changedResearch = true
+                                },
+                label = { Text("Research") }
+            )
             if (orientation == Configuration.ORIENTATION_PORTRAIT) {
-                for (i in 0..pokes.size - 1) {
+                for (i in 0..pokesToDisplay.size - 1) {
                     Row(
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Button(onClick = {
-                            println(pokes[i].name)
+                            println(pokesToDisplay[i].name)
                             // TODO
                             // Redigerer vers la page Pokedex
                         }) {
                             AsyncImage(
-                                model = pokes[i].picUrl,
+                                model = pokesToDisplay[i].picUrl,
                                 placeholder = painterResource(R.drawable.loading),
                                 error = painterResource(R.drawable.poke_bg),
-                                contentDescription = "Image of " + pokes[i].name,
+                                contentDescription = "Image of " + pokesToDisplay[i].name,
                                 modifier = Modifier
                                     .height(50.dp)
                                     .width(50.dp)
                             )
                             Text(
-                                text = pokes[i].name.replaceFirstChar {
+                                text = pokesToDisplay[i].name.replaceFirstChar {
                                     if (it.isLowerCase()) {
                                         it.titlecase().toString()
                                     } else {
@@ -327,24 +356,24 @@ fun Loading(orientation: Int) : String {
                     Column(
                         horizontalAlignment = Alignment.End,
                     ) {
-                        for (i in 0..pokes.size - 1 step 2) {
+                        for (i in 0..pokesToDisplay.size - 1 step 2) {
                             Button(
                                 onClick = {
-                                    println(pokes[i].name)
+                                    println(pokesToDisplay[i].name)
                                     // TODO
                                     // Redigerer vers la page Pokedex
                                 }) {
                                 AsyncImage(
-                                    model = pokes[i].picUrl,
+                                    model = pokesToDisplay[i].picUrl,
                                     placeholder = painterResource(R.drawable.loading),
                                     error = painterResource(R.drawable.poke_bg),
-                                    contentDescription = "Image of " + pokes[i].name,
+                                    contentDescription = "Image of " + pokesToDisplay[i].name,
                                     modifier = Modifier
                                         .height(50.dp)
                                         .width(50.dp)
                                 )
                                 Text(
-                                    text = pokes[i].name.replaceFirstChar {
+                                    text = pokesToDisplay[i].name.replaceFirstChar {
                                         if (it.isLowerCase()) {
                                             it.titlecase().toString()
                                         } else {
@@ -361,24 +390,24 @@ fun Loading(orientation: Int) : String {
                     Column(
                         horizontalAlignment = Alignment.Start,
                     ) {
-                        for (i in 1..pokes.size - 1 step 2) {
+                        for (i in 1..pokesToDisplay.size - 1 step 2) {
                             Button(
                                 onClick = {
-                                    println(pokes[i].name)
+                                    println(pokesToDisplay[i].name)
                                     // TODO
                                     // Redigerer vers la page Pokedex
                                 }) {
                                 AsyncImage(
-                                    model = pokes[i].picUrl,
+                                    model = pokesToDisplay[i].picUrl,
                                     placeholder = painterResource(R.drawable.loading),
                                     error = painterResource(R.drawable.poke_bg),
-                                    contentDescription = "Image of " + pokes[i].name,
+                                    contentDescription = "Image of " + pokesToDisplay[i].name,
                                     modifier = Modifier
                                         .height(50.dp)
                                         .width(50.dp)
                                 )
                                 Text(
-                                    text = pokes[i].name.replaceFirstChar {
+                                    text = pokesToDisplay[i].name.replaceFirstChar {
                                         if (it.isLowerCase()) {
                                             it.titlecase().toString()
                                         } else {
@@ -425,6 +454,7 @@ fun Loading(orientation: Int) : String {
                         threads.awaitAll()
                         println("REAL SIZE" + pokes.size)
                         pokes.sortWith({ lhs: PokedexData, rhs: PokedexData -> lhs.id - rhs.id })
+                        changedResearch = true
                     } catch (e: Exception) {
                         pokemonData = "Fetch fail"
                     }

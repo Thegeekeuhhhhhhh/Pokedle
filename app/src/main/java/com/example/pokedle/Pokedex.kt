@@ -280,14 +280,12 @@ fun Loading(orientation: Int) : String {
     } else {
         if (changedResearch) {
             if (guess.length == 0) {
-                println("Guess = null")
                 pokesToDisplay.clear()
                 for (i in 0..pokes.size - 1) {
                     pokesToDisplay.add(PokedexData(pokes[i].name, pokes[i].picUrl, pokes[i].id))
                 }
             } else {
                 pokesToDisplay.clear()
-                println("Guess = $guess")
                 for (i in 0..pokes.size - 1) {
                     if (pokes[i].name.lowercase().startsWith(guess.lowercase())) {
                         pokesToDisplay.add(PokedexData(pokes[i].name, pokes[i].picUrl, pokes[i].id))

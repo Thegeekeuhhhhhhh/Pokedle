@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("kotlin-parcelize")
+    kotlin("plugin.serialization") version "2.1.21"
 }
 
 android {
@@ -56,8 +57,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx.v241)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.com.squareup.okhttp3.okhttp)
-    implementation(libs.moshi.kotlin)
-    implementation(libs.moshi)
+
+    // Json
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

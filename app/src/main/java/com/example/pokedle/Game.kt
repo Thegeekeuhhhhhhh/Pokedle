@@ -113,20 +113,21 @@ data class pokeData (
 fun PokedleGame(content: InputStream) {
     var guess by remember { mutableStateOf("") }
     var feedback by remember { mutableStateOf("") }
-    val targetPokemon =
-        remember { listOf("pikachu", "bulbasaur", "charmander", "squirtle").random() }
+    val jsonstr = content.bufferedReader().readText()
+
+    val pokelistMap = remember {
+        Json.decodeFromString<Map<String, pokeData>>(jsonstr)
+    }
+    val pokelist = remember { mutableStateOf(pokelistMap) }
+
+    val guessData = pokelist.value[guess.lowercase()]
+
+    val targetName = remember { pokelistMap.keys.random() }
+    val targetData = pokelistMap[targetName]
 
     val tried = remember { mutableMapOf<String, String>() }
-
     var changedResearch by remember { mutableStateOf(true) }
-    var changedGuess by remember { mutableStateOf(true) }
 
-    val jsonstr = content.bufferedReader().readText()
-    val pokelist = remember {
-        mutableStateOf<Map<String, pokeData>>(
-            Json.decodeFromString<Map<String, pokeData>>(jsonstr)
-        )
-    }
     var toDisplay = remember { mutableStateListOf<Pair<String, String>>() }
 
     Column(
@@ -137,9 +138,16 @@ fun PokedleGame(content: InputStream) {
         Column(
             modifier = Modifier
                 .padding(top = 90.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text("Guess the Pokémon!", fontSize = 28.sp, fontWeight = W900)
+
+            Text(
+                text = "🔍 Target (debug): ${targetName.replaceFirstChar { it.uppercase() }}",
+                fontSize = 18.sp,
+                color = Color.Red,
+                modifier = Modifier.padding(top = 8.dp)
+            )
 
             OutlinedTextField(
                 value = guess,
@@ -151,21 +159,20 @@ fun PokedleGame(content: InputStream) {
             )
 
             Text(text = feedback, fontSize = 20.sp, modifier = Modifier.padding(top = 16.dp))
+
         }
 
         if (changedResearch) {
-            if (guess.length == 0) {
+            if (guess.isEmpty()) {
                 toDisplay.clear()
             } else {
                 toDisplay.clear()
                 for (elt in pokelist.value.keys) {
-                    if (elt.lowercase()
-                            .startsWith(guess.lowercase()) && !tried.contains(elt)
-                    ) {
+                    if (elt.lowercase().startsWith(guess.lowercase()) && !tried.contains(elt)) {
                         toDisplay.add(
                             Pair(
                                 elt,
-                                pokelist.value[elt]?.image_link ?: "CACA LINK"
+                                pokelist.value[elt]?.image_link ?: ""
                             )
                         )
                     }
@@ -175,49 +182,77 @@ fun PokedleGame(content: InputStream) {
         }
 
         val state = rememberScrollState(0)
-        if (toDisplay.size > 0) {
+        if (toDisplay.isNotEmpty()) {
             Column(
                 modifier = Modifier
-                    .background(Color.Transparent).padding(20.dp).height(250.dp)
-                    .verticalColumnScrollbar(state)
-                    .verticalScroll(
-                        state
-                    ),
+                    .background(Color.Transparent)
+                    .padding(20.dp)
+                    .height(250.dp)
+                    .verticalScroll(state),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                for (i in 0..toDisplay.size - 1) {
+                for (i in toDisplay.indices) {
                     Row(
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Button(onClick = {
-                            guess = toDisplay[i].first
-                            feedback = if (guess.lowercase() == targetPokemon) {
-                                "Correct! It was $targetPokemon."
-                            } else {
-                                "Wrong! Try again."
+                            val chosen = toDisplay[i].first
+                            guess = chosen
+                            val guessData = pokelistMap[guess.lowercase()]
+                            if (guess.lowercase() == targetName.lowercase()) {
+                                feedback = "✅ Correct! It was ${targetName.replaceFirstChar { it.uppercase() }}.\n"
+                                feedback += """
+                                    - Type: ${targetData?.type1}${if (targetData?.type2 != null) "/${targetData.type2}" else ""}
+                                    - Color: ${targetData?.color}
+                                    - Height: ${targetData?.height}
+                                    - Weight: ${targetData?.weight}
+                                    - Stage: ${targetData?.evolution_stage}
+                                """.trimIndent()
+                            } else if (guessData != null) {
+                                feedback = "❌ Wrong! Try again.\n"
+                                feedback += "- Type: ${guessData.type1}" +
+                                        (if (guessData.type2 != null) "/${guessData.type2}" else "") +
+                                        if ((guessData.type1 == targetData?.type1 || guessData.type1 == targetData?.type2) ||
+                                            (guessData.type2 != null && (guessData.type2 == targetData?.type1 || guessData.type2 == targetData?.type2))) {
+                                            " ✅"
+                                        } else {
+                                            ""
+                                        }
+                                feedback += "\n- Color: ${guessData.color}" +
+                                        if (guessData.color == targetData?.color) " ✅" else ""
+                                feedback += "\n- Height: ${guessData.height}" +
+                                        when {
+                                            guessData.height == targetData?.height -> " ✅"
+                                            guessData.height > (targetData?.height ?: 0) -> " 🔽"
+                                            else -> " 🔼"
+                                        }
+
+                                feedback += "\n- Weight: ${guessData.weight}" +
+                                        when {
+                                            guessData.weight == targetData?.weight -> " ✅"
+                                            guessData.weight > (targetData?.weight ?: 0) -> " 🔽"
+                                            else -> " 🔼"
+                                        }
+                                feedback += "\n- Stage: ${guessData.evolution_stage}" +
+                                        if (guessData.evolution_stage == targetData?.evolution_stage) " ✅" else ""
                             }
                             guess = ""
-                            tried.put(toDisplay[i].first, toDisplay[i].second)
+                            tried[chosen] = toDisplay[i].second
                             changedResearch = true
-                            changedGuess = true
                         }) {
                             AsyncImage(
                                 model = toDisplay[i].second,
                                 placeholder = painterResource(R.drawable.loading),
                                 error = painterResource(R.drawable.poke_bg),
-                                contentDescription = "Image of " + toDisplay[i].first,
+                                contentDescription = "Image of ${toDisplay[i].first}",
                                 modifier = Modifier
                                     .height(50.dp)
                                     .width(50.dp)
                             )
                             Text(
                                 text = toDisplay[i].first.replaceFirstChar {
-                                    if (it.isLowerCase()) {
-                                        it.titlecase().toString()
-                                    } else {
-                                        it.toString()
-                                    }
+                                    if (it.isLowerCase()) it.titlecase() else it.toString()
                                 },
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.W700,
@@ -227,27 +262,16 @@ fun PokedleGame(content: InputStream) {
                 }
             }
         } else {
-            Column(
-                modifier = Modifier
-                    .background(Color.Transparent).height(250.dp)
-            ) {
-                // Juste histoire de garder de la coherence
-            }
+            Column(modifier = Modifier.height(250.dp)) {}
         }
 
-
-
-
-
         val state2 = rememberScrollState(0)
-        if (tried.size > 0) {
+        if (tried.isNotEmpty()) {
             Column(
                 modifier = Modifier
-                    .background(Color.Transparent).padding(50.dp).height(400.dp)
-                    .verticalColumnScrollbar(state2)
-                    .verticalScroll(
-                        state2
-                    ),
+                    .padding(50.dp)
+                    .height(400.dp)
+                    .verticalScroll(state2),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 for (i in tried.keys.reversed()) {
@@ -259,18 +283,14 @@ fun PokedleGame(content: InputStream) {
                             model = tried[i],
                             placeholder = painterResource(R.drawable.loading),
                             error = painterResource(R.drawable.poke_bg),
-                            contentDescription = "Image of " + i,
+                            contentDescription = "Image of $i",
                             modifier = Modifier
                                 .height(50.dp)
                                 .width(50.dp)
                         )
                         Text(
                             text = i.replaceFirstChar {
-                                if (it.isLowerCase()) {
-                                    it.titlecase().toString()
-                                } else {
-                                    it.toString()
-                                }
+                                if (it.isLowerCase()) it.titlecase() else it.toString()
                             },
                             fontSize = 28.sp,
                             fontWeight = FontWeight.W700,
@@ -279,21 +299,8 @@ fun PokedleGame(content: InputStream) {
                 }
             }
         } else {
-            Column(
-                modifier = Modifier
-                    .background(Color.Transparent).height(250.dp)
-            ) {
-                // Juste histoire de garder de la coherence
-            }
+            Column(modifier = Modifier.height(250.dp)) {}
         }
-
-
-
-
-
-
-
-
     }
 }
 

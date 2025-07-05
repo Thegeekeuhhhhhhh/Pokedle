@@ -97,7 +97,6 @@ class MainActivity : ComponentActivity() {
                                 })
                             }
                         }
-                        BeautifulColors("Dardan Bytyqi\nHugo Viala\nLéo Menaldo")
                     }
                 }
             }

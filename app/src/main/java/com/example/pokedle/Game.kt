@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.widget.ImageButton
 import androidx.activity.ComponentActivity
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -39,6 +41,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontWeight.Companion.W900
 import androidx.compose.ui.text.style.TextAlign
@@ -130,7 +133,7 @@ fun PokedleGame(content: InputStream) {
     val targetName = remember { pokelistMap.keys.random() }
     val targetData = pokelistMap[targetName]
 
-    val tried = remember { mutableMapOf<String, String>() }
+    val tried = remember { mutableMapOf<String, pokeData>() }
     var changedResearch by remember { mutableStateOf(true) }
 
     var toDisplay = remember { mutableStateListOf<Pair<String, String>>() }
@@ -162,9 +165,6 @@ fun PokedleGame(content: InputStream) {
                 },
                 label = { Text("Enter name") }
             )
-
-            Text(text = feedback, fontSize = 20.sp, modifier = Modifier.padding(top = 16.dp))
-
         }
 
         if (changedResearch) {
@@ -205,6 +205,7 @@ fun PokedleGame(content: InputStream) {
                             val chosen = toDisplay[i].first
                             guess = chosen
                             val guessData = pokelistMap[guess.lowercase()]
+                            /*
                             if (guess.lowercase() == targetName.lowercase()) {
                                 feedback =
                                     "✅ Correct! It was ${targetName.replaceFirstChar { it.uppercase() }}.\n"
@@ -244,8 +245,9 @@ fun PokedleGame(content: InputStream) {
                                 feedback += "\n- Stage: ${guessData.evolution_stage}" +
                                         if (guessData.evolution_stage == targetData?.evolution_stage) " ✅" else ""
                             }
+                            */
                             guess = ""
-                            tried[chosen] = toDisplay[i].second
+                            tried[chosen] = guessData as pokeData
                             changedResearch = true
                         }) {
                             AsyncImage(
@@ -269,19 +271,57 @@ fun PokedleGame(content: InputStream) {
                     }
                 }
             }
-        } else {
-            Column(modifier = Modifier.height(250.dp)) {}
         }
 
         val state2 = rememberScrollState(0)
         if (tried.isNotEmpty()) {
             Column(
                 modifier = Modifier
-                    .padding(50.dp)
+                    .padding(10.dp)
                     .height(400.dp)
                     .verticalScroll(state2),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Type1",
+                        modifier = Modifier.width(50.dp).fillMaxWidth(),
+                        style = TextStyle(fontSize = 12.sp, textAlign = TextAlign.Center),
+                    )
+                    Text(
+                        text = "Type2",
+                        modifier = Modifier.width(50.dp).fillMaxWidth(),
+                        style = TextStyle(fontSize = 12.sp, textAlign = TextAlign.Center),
+                    )
+                    Text(
+                        text = "Color",
+                        modifier = Modifier.width(50.dp).fillMaxWidth(),
+                        style = TextStyle(fontSize = 12.sp, textAlign = TextAlign.Center),
+                    )
+                    Text(
+                        text = "Habitat",
+                        modifier = Modifier.width(50.dp).fillMaxWidth(),
+                        style = TextStyle(fontSize = 12.sp, textAlign = TextAlign.Center),
+                    )
+                    Text(
+                        text = "Height",
+                        modifier = Modifier.width(50.dp).fillMaxWidth(),
+                        style = TextStyle(fontSize = 12.sp, textAlign = TextAlign.Center),
+                    )
+                    Text(
+                        text = "Weight",
+                        modifier = Modifier.width(50.dp).fillMaxWidth(),
+                        style = TextStyle(fontSize = 12.sp, textAlign = TextAlign.Center),
+                    )
+                    Text(
+                        text = "Evol. Stage",
+                        modifier = Modifier.width(50.dp).fillMaxWidth(),
+                        style = TextStyle(fontSize = 12.sp, textAlign = TextAlign.Center),
+                    )
+                }
                 for (i in tried.keys.reversed()) {
                     Box(Modifier.background(Color.White)) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -290,7 +330,7 @@ fun PokedleGame(content: InputStream) {
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 AsyncImage(
-                                    model = tried[i],
+                                    model = tried[i]?.image_link,
                                     placeholder = painterResource(R.drawable.loading),
                                     error = painterResource(R.drawable.poke_bg),
                                     contentDescription = "Image of $i",
@@ -307,64 +347,200 @@ fun PokedleGame(content: InputStream) {
                                 )
                             }
 
-                            /*
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
 
-                            var col = Color.Red
-
-                            Box(
-                                modifier = Modifier.size(50.dp).background(col),
-                                contentAlignment = Alignment.Center
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
+
+                                var col = Color.Red
+                                if (tried[i]?.type1 == targetData?.type1) {
+                                    col = Color.Green;
+                                }
                                 Box(
-                                    modifier = Modifier.drawWithCache {
-                                            val path = Path()
-                                            path.moveTo(10f, 40f)
-                                            path.lineTo(size.width / 2f, size.height / 2f + 40)
-                                            path.lineTo(size.width - 10f, 40f)
-                                            path.close()
-                                            onDrawBehind {
-                                                drawPath(path, Color.DarkGray, style = Stroke(width = 10f))
-                                            }
-                                        }
-                                        .fillMaxSize()
-                                )
-                                Text(tried[i])
-                            }
+                                    modifier = Modifier.size(50.dp).background(col),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    var txt = tried[i]?.type1.toString()
+                                    if (txt == "null") {
+                                        txt = "None"
+                                    }
+                                    Text(txt, fontSize = 12.sp);
+                                }
 
-                            Box(
-                                modifier = Modifier.size(50.dp).background(Color.Red),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Lol")
-                            }
+                                col = Color.Red
+                                if (tried[i]?.type2 == targetData?.type2) {
+                                    col = Color.Green;
+                                }
+                                Box(
+                                    modifier = Modifier.size(50.dp).background(col),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    var txt = tried[i]?.type2.toString()
+                                    if (txt == "null") {
+                                        txt = "None"
+                                    }
+                                    Text(txt, fontSize = 12.sp);
+                                }
 
-                            Box(
-                                modifier = Modifier.size(50.dp).background(Color.Red),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Lol")
-                            }
+                                col = Color.Red
+                                if (tried[i]?.color == targetData?.color) {
+                                    col = Color.Green;
+                                }
+                                Box(
+                                    modifier = Modifier.size(50.dp).background(col),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    var txt = tried[i]?.color.toString()
+                                    if (txt == "null") {
+                                        txt = "None"
+                                    }
+                                    Text(txt, fontSize = 12.sp);
+                                }
 
-                            Box(
-                                modifier = Modifier.size(50.dp).background(Color.Red),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Lol")
-                            }
+                                col = Color.Red
+                                if (tried[i]?.habitat == targetData?.habitat) {
+                                    col = Color.Green;
+                                }
+                                Box(
+                                    modifier = Modifier.size(50.dp).background(col),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    var txt = tried[i]?.habitat.toString()
+                                    if (txt == "null") {
+                                        txt = "None"
+                                    }
+                                    Text(txt, fontSize = 12.sp);
+                                }
 
-                            Box(
-                                modifier = Modifier.size(50.dp).background(Color.Red),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Lol")
-                            }
-                        }
+                                col = Color.Yellow
+                                if (tried[i]?.height == targetData?.height) {
+                                    col = Color.Green;
+                                }
+                                Log.i("lol", tried[i]?.height.toString())
+                                Box(
+                                    modifier = Modifier.size(50.dp).background(col),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (tried[i]?.height!! > targetData?.height!!) {
+                                        Box(
+                                            modifier = Modifier.drawWithCache {
+                                                val path = Path()
+                                                path.moveTo(10f, 40f)
+                                                path.lineTo(size.width / 2f, size.height / 2f + 40)
+                                                path.lineTo(size.width - 10f, 40f)
+                                                path.close()
+                                                onDrawBehind {
+                                                    drawPath(
+                                                        path,
+                                                        Color.DarkGray,
+                                                        style = Stroke(width = 10f)
+                                                    )
+                                                }
+                                            }.fillMaxSize()
+                                        )
+                                    } else if (tried[i]?.height!! < targetData?.height!!) {
+                                        Box(
+                                            modifier = Modifier.drawWithCache {
+                                                val path = Path()
+                                                path.moveTo(
+                                                    10f,
+                                                    size.height - 40f
+                                                ) // Left base corner
+                                                path.lineTo(
+                                                    size.width / 2f,
+                                                    size.height / 2f - 40f
+                                                ) // Tip of arrow (higher up)
+                                                path.lineTo(
+                                                    size.width - 10f,
+                                                    size.height - 40f
+                                                ) // Right base corner
+                                                path.close()
+                                                onDrawBehind {
+                                                    drawPath(
+                                                        path,
+                                                        Color.DarkGray,
+                                                        style = Stroke(width = 10f)
+                                                    )
+                                                }
+                                            }.fillMaxSize()
+                                        )
+                                    }
+                                    val h = tried[i]?.height!!.toDouble() / 10
+                                    Text(h.toString() + "0m", fontSize = 12.sp);
+                                }
 
-                         */
+                                col = Color.Yellow
+                                if (tried[i]?.weight == targetData?.weight) {
+                                    col = Color.Green;
+                                }
+                                Log.i("lol", tried[i]?.weight.toString())
+                                Box(
+                                    modifier = Modifier.size(50.dp).background(col),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (tried[i]?.weight!! > targetData?.weight!!) {
+                                        Box(
+                                            modifier = Modifier.drawWithCache {
+                                                val path = Path()
+                                                path.moveTo(10f, 40f)
+                                                path.lineTo(size.width / 2f, size.height / 2f + 40)
+                                                path.lineTo(size.width - 10f, 40f)
+                                                path.close()
+                                                onDrawBehind {
+                                                    drawPath(
+                                                        path,
+                                                        Color.DarkGray,
+                                                        style = Stroke(width = 10f)
+                                                    )
+                                                }
+                                            }.fillMaxSize()
+                                        )
+                                    } else if (tried[i]?.weight!! < targetData?.weight!!) {
+                                        Box(
+                                            modifier = Modifier.drawWithCache {
+                                                val path = Path()
+                                                path.moveTo(
+                                                    10f,
+                                                    size.height - 40f
+                                                ) // Left base corner
+                                                path.lineTo(
+                                                    size.width / 2f,
+                                                    size.height / 2f - 40f
+                                                ) // Tip of arrow (higher up)
+                                                path.lineTo(
+                                                    size.width - 10f,
+                                                    size.height - 40f
+                                                ) // Right base corner
+                                                path.close()
+                                                onDrawBehind {
+                                                    drawPath(
+                                                        path,
+                                                        Color.DarkGray,
+                                                        style = Stroke(width = 10f)
+                                                    )
+                                                }
+                                            }.fillMaxSize()
+                                        )
+                                    }
+                                    Text(tried[i]?.weight.toString() + "kg", fontSize = 12.sp);
+                                }
+
+                                col = Color.Red
+                                if (tried[i]?.evolution_stage == targetData?.evolution_stage) {
+                                    col = Color.Green;
+                                }
+                                Box(
+                                    modifier = Modifier.size(50.dp).background(col),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    var txt = tried[i]?.evolution_stage.toString()
+                                    if (txt == "null") {
+                                        txt = "None"
+                                    }
+                                    Text(txt, fontSize = 12.sp);
+                                }
+                            }
                         }
                     }
                 }

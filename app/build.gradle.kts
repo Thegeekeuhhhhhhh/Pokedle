@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.pokedle"
+    namespace = "com.thegeekeuhhhhhhhindustries.pokedle"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.pokedle"
+        applicationId = "com.thegeekeuhhhhhhhindustries.pokedle"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

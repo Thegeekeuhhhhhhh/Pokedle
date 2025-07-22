@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rules & Privacy Policy - Pokédle</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-button">
+            ← Back to Game
+        </a>
+
+        <div class="header">
+            <h1>⚖️ Legal Informations</h1>
+            <p>Everything you need to know about Pokédle</p>
+        </div>
+
+        <div class="content-section">
+            <h2>⚖️ Legal Informations</h2>
+            
+            <h3>Pokémon Trademark</h3>
+            <p>Pokémon is a trademark of Nintendo, Creatures Inc., and GAME FREAK Inc. This fan-made game is not affiliated with, endorsed by, or connected to these companies.</p>
+
+            <h3>Fair Use</h3>
+            <p>This game is created under fair use provisions for:</p>
+            <ul>
+                <li>Educational and entertainment purposes</li>
+                <li>Non-commercial use</li>
+                <li>Transformative gameplay experience</li>
+            </ul>
+
+            <h3>No Warranty</h3>
+            <p>The game is provided "as is" without warranty of any kind. We are not responsible for any loss of data or gameplay progress.</p>
+
+            <div class="highlight-box">
+                <h4>Family-Friendly Gaming</h4>
+                <p>Pokédle is designed for all ages and provides a safe, educational gaming experience for Pokémon fans of every generation.</p>
+            </div>
+        </div>
+
+        <div class="contact-info">
+            <h3>Questions or Concerns?</h3>
+            <p>If you have any questions about these rules or privacy practices, please feel free to contact us through our social media channels.</p>
+        </div>
+
+        <div class="last-updated">
+            <p>Last updated: 22 July 2025</p>
+        </div>
+    </div>
+
+    <script>
+        // Smooth scroll for back button if used as anchor
+        document.querySelector('.back-button').addEventListener('click', function(e) {
+            // If this page is loaded as a section instead of separate page
+            if (this.getAttribute('href').startsWith('#')) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        });
+
+        // Add scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Animate content sections on scroll
+        document.querySelectorAll('.content-section').forEach((section, index) => {
+            section.style.opacity = '0';
+            section.style.transform = 'translateY(30px)';
+            section.style.transition = `all 0.8s ease ${index * 0.1}s`;
+            observer.observe(section);
+        });
+    </script>
+</body>
+</html>

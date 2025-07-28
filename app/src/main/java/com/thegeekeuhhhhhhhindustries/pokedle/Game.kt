@@ -66,7 +66,7 @@ class Game : ComponentActivity() {
                 ) {
                     if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
                         Image(
-                            painter = painterResource(R.drawable.game_bg),
+                            painter = painterResource(R.drawable.poke_bg),
                             contentDescription = "Poke background",
                             contentScale = ContentScale.FillBounds,
                             modifier = Modifier.matchParentSize(),
@@ -145,11 +145,9 @@ fun PokedleGame(content: InputStream) {
     ) {
         Column(
             modifier = Modifier
-                .padding(top = 90.dp),
+                .padding(top = 140.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Guess the Pokémon!", fontSize = 28.sp, fontWeight = W900)
-
             /*
             Text(
                 text = "🔍 Target (debug): ${targetName.replaceFirstChar { it.uppercase() }}",
@@ -165,7 +163,7 @@ fun PokedleGame(content: InputStream) {
                     guess = it
                     changedResearch = true
                 },
-                label = { Text("Enter name") }
+                label = { Text("Guess the Pokemon !") }
             )
         }
 

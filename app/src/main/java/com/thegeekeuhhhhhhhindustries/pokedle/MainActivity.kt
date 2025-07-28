@@ -72,10 +72,6 @@ class MainActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     )
                     {
-                        Image(
-                            painter = painterResource(R.drawable.logo),
-                            contentDescription = "Pokedle logo",
-                        )
                         if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
                             GetStartButton(start = {
                                 val intent = Intent(this@MainActivity, Game::class.java)
